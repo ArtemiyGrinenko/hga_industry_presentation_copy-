@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hierarchical Global Attention — Research Project</title>
+<style>
+  :root {
+    --green: #123b32;
+    --green-deep: #09251f;
+    --green-light: #dfe8e1;
+    --cream: #f4f2eb;
+    --paper: #fbfaf6;
+    --ink: #18241f;
+    --muted: #626d66;
+    --line: #d5d9d1;
+    --accent: #b5c8ad;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+  a { color: inherit; }
+  .topbar { height: 68px; padding: 0 clamp(20px, 5vw, 76px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.15); background: var(--green-deep); color: #fff; letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
+  .wordmark { font-weight: 650; letter-spacing: .19em; }
+  .topbar a { text-decoration: none; opacity: .82; }
+  .hero { position: relative; overflow: hidden; color: #fff; background: var(--green); padding: clamp(70px, 11vw, 150px) clamp(22px, 9vw, 140px) 76px; }
+  .eyebrow { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: #c4d5c9; margin: 0 0 24px; }
+  h1 { font: 400 clamp(44px, 7vw, 88px)/.99 var(--serif); letter-spacing: -.045em; max-width: 900px; margin: 0; position: relative; z-index: 1; }
+  .hero-sub { font: 400 clamp(19px, 2.1vw, 26px)/1.45 var(--serif); color: #e2e9e2; max-width: 740px; margin: 30px 0 0; position: relative; z-index: 1; }
+  .hero-foot { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-top: 44px; color: #d5e0d7; font-size: 11px; text-transform: uppercase; letter-spacing: .13em; position: relative; z-index: 1; }
+  .hero-foot span + span:before { content: "•"; margin-right: 20px; color: #a7c1ae; }
+  .wrap { width: min(1100px, calc(100% - 44px)); margin: 0 auto; }
+  .intro { padding: 74px 0 64px; display: grid; grid-template-columns: .75fr 1.25fr; gap: clamp(28px, 6vw, 90px); border-bottom: 1px solid var(--line); }
+  .section-label { margin: 5px 0 0; color: var(--green); text-transform: uppercase; letter-spacing: .16em; font-size: 11px; font-weight: 700; }
+  h2 { font: 400 clamp(31px, 4vw, 48px)/1.08 var(--serif); letter-spacing: -.025em; margin: 0 0 23px; }
+  .intro p { font-size: 17px; line-height: 1.8; margin: 0 0 16px; max-width: 720px; }
+  .intro .caveat { color: var(--muted); font-size: 14px; }
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin: 0 0 78px; }
+  .metric { background: var(--cream); padding: 28px 25px 26px; min-height: 150px; }
+  .metric strong { display: block; font: 400 clamp(31px, 4vw, 45px)/1 var(--serif); color: var(--green); letter-spacing: -.03em; }
+  .metric span { display: block; margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .toc { padding: 0 0 74px; }
+  .toc-head { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 20px; }
+  .toc-head p { margin: 0; color: var(--muted); font-size: 13px; }
+  .toc-list { border-top: 1px solid var(--line); }
+  .toc-item { display: flex; align-items: center; gap: 22px; padding: 18px 4px; border-bottom: 1px solid var(--line); text-decoration: none; transition: padding .2s, color .2s; }
+  .toc-item:hover { padding-left: 12px; color: var(--green); }
+  .toc-num { color: #78877c; font-size: 11px; letter-spacing: .12em; width: 30px; }
+  .toc-title { flex: 1; font: 400 22px var(--serif); }
+  .toc-arrow { font-size: 20px; color: var(--green); }
+  .content-section { padding: 64px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: .7fr 1.3fr; gap: clamp(28px, 6vw, 90px); }
+  .content-section h2 { font-size: clamp(29px, 3.6vw, 42px); }
+  .content-section p { margin: 0 0 16px; }
+  .content-section .lead { font: 400 20px/1.55 var(--serif); color: var(--green); }
+  details { border-top: 1px solid var(--line); margin-top: 24px; }
+  details summary { cursor: pointer; list-style: none; padding: 15px 0; font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--green); font-weight: 700; display: flex; justify-content: space-between; gap: 20px; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary:after { content: "+"; font-size: 18px; line-height: 1; }
+  details[open] summary:after { content: "−"; }
+  .detail-body { padding: 0 0 18px; color: #3e4942; font-size: 14px; }
+  .detail-body ul { padding-left: 20px; }
+  .detail-body li { margin-bottom: 8px; }
+  .results { background: var(--green-deep); color: white; padding: 76px 0; width: 100vw; margin-left: calc(50% - 50vw); }
+  .results .section-label { color: #c4d5c9; }
+  .results h2 { max-width: 700px; }
+  .results-intro { max-width: 740px; color: #d8e2da; font-size: 16px; }
+  .result-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 34px; }
+  .result-card { border: 1px solid rgba(255,255,255,.22); padding: 25px; }
+  .result-card .small { text-transform: uppercase; letter-spacing: .14em; font-size: 10px; color: #b8cbbd; }
+  .result-card h3 { font: 400 25px/1.2 var(--serif); margin: 13px 0; }
+  .result-card p { color: #d8e2da; font-size: 14px; margin: 0; }
+  .honesty { margin-top: 20px; padding: 22px 24px; background: rgba(255,255,255,.07); border-left: 2px solid #b5c8ad; color: #e2e9e2; font-size: 14px; }
+  .paper-links { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .paper { display: block; border: 1px solid var(--line); padding: 22px; text-decoration: none; background: var(--cream); }
+  .paper:hover { border-color: var(--green); }
+  .paper span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 10px; }
+  .paper strong { display: block; font: 400 21px/1.25 var(--serif); color: var(--green); }
+  .paper em { display: block; margin-top: 12px; font-style: normal; font-size: 12px; color: var(--green); }
+  footer { background: var(--cream); padding: 30px 22px; text-align: center; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
+  @media (max-width: 700px) {
+    .intro, .content-section { grid-template-columns: 1fr; gap: 22px; }
+    .metrics { grid-template-columns: 1fr; }
+    .metric { min-height: 0; }
+    .result-grid, .paper-links { grid-template-columns: 1fr; }
+    .toc-head { display: block; }
+    .toc-head p { margin-top: 10px; }
+  }
+  @media print {
+    .topbar { background: white; color: black; border-bottom: 1px solid #ccc; }
+    .hero, .results { background: white; color: black; }
+    .hero-sub, .hero-foot, .results-intro, .result-card p, .honesty { color: #333; }
+    details .detail-body { display: block; }
+    a { text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wordmark">Long-context AI</div>
+  <a href="#papers">Read the papers ↗</a>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">AI infrastructure · Research-backed invention</p>
+    <h1>More context.<br>Less GPU memory.</h1>
+    <p class="hero-sub">Helping capable AI models work with larger histories on more modest hardware — with the quality trade-offs made clear.</p>
+    <div class="hero-foot"><span>Hierarchical Global Attention</span><span>Inference &amp; fine-tuning</span></div>
+  </section>
+
+  <div class="wrap">
+    <section class="intro" id="introduction">
+      <div><p class="section-label">The opportunity</p></div>
+      <div>
+        <h2>Can companies use long-context AI without continually scaling up their hardware?</h2>
+        <p>AI can help teams review contracts, search internal knowledge, understand large codebases and support agents that work through many steps. But the useful information is often spread across long documents and earlier interactions. Processing that history can become a memory and infrastructure bottleneck — especially when sensitive data needs to stay within a company-controlled environment.</p>
+        <p><strong>Hierarchical Global Attention (HGA)</strong> is designed to reduce this bottleneck. Rather than attending to every historical token on every step, it identifies relevant parts of the context and performs attention over the selected tokens. The approach has already been tested: the reported experiments demonstrate 64K-token inference on a single 32 GB GPU and 16K-token fine-tuning sequences on a 16 GB GPU.</p>
+        <p class="caveat">The result is not cost-free: routed attention is approximate and does not perfectly match dense attention. The reported loss gap is small in the tested inference settings, but accuracy, latency and savings must still be validated for each real-world workload.</p>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Selected experimental results">
+      <div class="metric"><strong>64K</strong><span>Inference context demonstrated with a pretrained Qwen3 model on one 32 GB GPU</span></div>
+      <div class="metric"><strong>16K</strong><span>Fine-tuning sequence demonstrated on a 16 GB GPU</span></div>
+      <div class="metric"><strong>0.01–0.02</strong><span>Reported loss gap from dense attention, in nats, across tested inference contexts</span></div>
+    </section>
+
+    <nav class="toc" aria-label="Table of contents">
+      <div class="toc-head">
+        <div><p class="section-label">Explore the invention</p><h2 style="margin:12px 0 0">Contents</h2></div>
+        <p>Choose a topic to jump to it.<br>Open “Note” for additional detail.</p>
+      </div>
+      <div class="toc-list">
+        <a class="toc-item" href="#problem"><span class="toc-num">01</span><span class="toc-title">The customer problem</span><span class="toc-arrow">↘</span></a>
+        <a class="toc-item" href="#approach"><span class="toc-num">02</span><span class="toc-title">The invention in brief</span><span class="toc-arrow">↘</span></a>
+        <a class="toc-item" href="#evidence"><span class="toc-num">03</span><span class="toc-title">What has already been demonstrated</span><span class="toc-arrow">↘</span></a>
+        <a class="toc-item" href="#quality"><span class="toc-num">04</span><span class="toc-title">Quality, limitations &amp; trade-offs</span><span class="toc-arrow">↘</span></a>
+        <a class="toc-item" href="#applications"><span class="toc-num">05</span><span class="toc-title">Industry applications</span><span class="toc-arrow">↘</span></a>
+        <a class="toc-item" href="#papers"><span class="toc-num">06</span><span class="toc-title">How it was developed &amp; research</span><span class="toc-arrow">↘</span></a>
+      </div>
+    </nav>
+
+    <section class="content-section" id="problem">
+      <div><p class="section-label">01 / The customer problem</p></div>
+      <div>
+        <h2>The context can cost more than the task requires.</h2>
+        <p class="lead">A model may be capable of solving a task, yet unable to process all the information needed for it within the available memory budget.</p>
+        <p>For a legal team, that may mean comparing multiple contracts, NDAs and email trails. For engineering, it may mean working across a large codebase and its documentation. For an AI agent, it may mean keeping track of the original goal, earlier decisions, tool outputs and changes made during a long workflow.</p>
+        <p>Companies can respond by buying more powerful hardware, simplifying the task, splitting the context into smaller pieces, or not deploying the tool. The invention targets one of the underlying reasons for this compromise: the cost of attending to a long history.</p>
+        <details>
+          <summary>Note</summary>
+          <div class="detail-body">
+            <p>In transformer models, the key/value (K/V) cache stores representations of previous tokens for reuse during generation. As the history grows, the cache and attention work can consume substantial GPU memory and compute. Weight quantization can reduce the memory used by model parameters, but it does not by itself eliminate the long-context cost.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="content-section" id="approach">
+      <div><p class="section-label">02 / The invention</p></div>
+      <div>
+        <h2>Find the relevant history instead of processing all of it equally.</h2>
+        <p class="lead">HGA uses hierarchical selection to introduce attention a smaller set of historical tokens.</p>
+        <p>The method searches the context in stages: first it identifies promising chunks, then narrows the selection to relevant groups of tokens. Attention is calculated over the original token representations in the selected groups. The full history can be held in system RAM or NVMe storage, while a smaller working set is brought to the GPU.</p>
+        <p>For inference, the method can be applied to a pretrained model without retraining its original attention projections. For fine-tuning, it can be combined with segmented backpropagation and tiered storage so that only the active training segment needs to remain in GPU memory.</p>
+        <details>
+          <summary>Note</summary>
+          <div class="detail-body">
+            <p>Routing is an approximation: it reduces the attention workload by selecting what the current query should inspect. If relevant information is not selected, prediction quality can suffer. The engineering goal is to reduce context-related resource use while keeping the quality gap acceptably small for the intended task.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="content-section" id="evidence">
+      <div><p class="section-label">03 / Experimental evidence</p></div>
+      <div>
+        <h2>The approach has already been tested.</h2>
+        <p class="lead">The reported experiments show that long-context inference and fine-tuning can be made feasible on specific, limited-memory GPU configurations.</p>
+        <p><strong>Inference:</strong> a pretrained Qwen3-30B-A3B-Instruct model in FP8 was demonstrated at a 64K-token context on one NVIDIA RTX 5090 with 32 GB of VRAM. In a 64K needle-in-a-haystack test, the model retrieved the inserted fact at all three tested positions. The inference paper reports a routed-versus-dense loss gap of approximately 0.01–0.02 nats across the tested 4K–64K contexts, with routing sparsity of around 3% in the reported comparisons.</p>
+        <p><strong>Fine-tuning:</strong> on a 16 GB Quadro RTX 5000, dense training in the reported setup fitted 2,048 tokens but ran out of memory at 4,096. With HGA and segment-wise backpropagation, training reached 16,384 tokens with about 15.28 GB peak VRAM. The resulting adapter was also evaluated at up to 131,072 tokens; that figure refers to evaluation, not training length.</p>
+        <details>
+          <summary>Note</summary>
+          <div class="detail-body">
+            <p>The inference retrieval result is three successful positions in one targeted test, not a general guarantee of perfect recall. In the fine-tuning comparison at the shared 2,048-token length, the HGA-trained adapter's loss was 2.7405 nats versus 2.7383 for the dense-trained adapter under the same dense-attention readout. These measurements are encouraging but specific to the models, data, hardware and protocols tested.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="results" id="quality">
+      <div class="wrap">
+        <p class="section-label">04 / Quality &amp; limitations</p>
+        <h2>More context matters only if answers stay useful.</h2>
+        <p class="results-intro">The method makes a deliberate trade-off: it reduces the number of historical tokens used for attention, rather than reproducing dense attention over the entire history. The quality difference should be visible to customers and evaluated for each application.</p>
+        <div class="result-grid">
+          <article class="result-card">
+            <div class="small">Inference quality</div>
+            <h3>A small, measurable loss gap</h3>
+            <p>The papers report a difference of around 0.01–0.02 nats from dense attention in the tested inference comparisons. That is not zero degradation, and a small average loss difference does not guarantee identical answers on every query.</p>
+          </article>
+          <article class="result-card">
+            <div class="small">Operational readiness</div>
+            <h3>Promising feasibility; optimization remains</h3>
+            <p>The inference paper reports high time-to-first-token latency in its current implementation. The fine-tuning paper notes that an optimized production-grade serving implementation is still under development.</p>
+          </article>
+        </div>
+        <div class="honesty"><strong>What this means in practice.</strong> The results show a way to extend context under the tested memory limits. They do not yet prove that every workload will be faster, cheaper or equally accurate. A deployment should measure task accuracy, latency, storage traffic, GPU use and total cost against its own baseline.</div>
+      </div>
+    </section>
+
+    <section class="content-section" id="applications">
+      <div><p class="section-label">05 / Industry applications</p></div>
+      <div>
+        <h2>More room for AI to work with real business history.</h2>
+        <p class="lead">The customer benefit is to make long-context workflows practical on infrastructure a business can afford and control.</p>
+        <div class="result-grid" style="margin-top:24px">
+          <article class="result-card" style="border-color:var(--line);background:var(--cream);color:var(--ink)">
+            <div class="small" style="color:var(--muted)">Legal &amp; compliance</div>
+            <h3 style="color:var(--green)">Contracts and NDAs</h3>
+            <p style="color:var(--muted)">Compare agreements, locate exceptions and connect clauses across long document sets, subject to legal review and task-specific validation.</p>
+          </article>
+          <article class="result-card" style="border-color:var(--line);background:var(--cream);color:var(--ink)">
+            <div class="small" style="color:var(--muted)">Software &amp; engineering</div>
+            <h3 style="color:var(--green)">Codebases and projects</h3>
+            <p style="color:var(--muted)">Give coding assistants and agents access to relevant source files, design decisions, documentation and earlier tool results.</p>
+          </article>
+          <article class="result-card" style="border-color:var(--line);background:var(--cream);color:var(--ink)">
+            <div class="small" style="color:var(--muted)">Enterprise knowledge</div>
+            <h3 style="color:var(--green)">Internal documentation</h3>
+            <p style="color:var(--muted)">Support analysis spanning handbooks, technical records, project files and historical discussions.</p>
+          </article>
+          <article class="result-card" style="border-color:var(--line);background:var(--cream);color:var(--ink)">
+            <div class="small" style="color:var(--muted)">AI agents</div>
+            <h3 style="color:var(--green)">Long multi-step workflows</h3>
+            <p style="color:var(--muted)">Help agents retain access to relevant context across planning, tool use, observation and iteration.</p>
+          </article>
+        </div>
+        <p style="margin-top:22px">For customers, the opportunity may be lower hardware requirements, fewer context-splitting workarounds, or the ability to deploy AI in environments where data must remain under organizational control. Actual savings depend on the task, model, hardware, routing quality and latency target.</p>
+        <details>
+          <summary>Note</summary>
+          <div class="detail-body">
+            <p>These are application areas, not claims that the papers have validated every listed industry workflow. For high-stakes or regulated uses, the system would need application-specific testing, safeguards and human review as appropriate.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="content-section" id="papers">
+      <div><p class="section-label">06 / Development &amp; research</p></div>
+      <div>
+        <h2>A engineering change, supported by published experiments.</h2>
+        <p class="lead">The invention was developed around one practical question: can a model access a long history without keeping every historical token active in GPU memory?</p>
+        <p>HGA addresses this by combining hierarchical routing with exact token-level attention over the selected history and by storing the wider history outside GPU memory. The follow-up work applies the same principle to fine-tuning, adding segmented backpropagation and tiered K/V storage. The first inference experiments used a pretrained model without fine-tuning it specifically for HGA; the fine-tuning experiments separately tested long-sequence training under a limited VRAM budget.</p>
+        <p>The measurements and technical limitations are documented in the two papers below. They are the reference for the demonstrated hardware configurations, quality comparisons and remaining engineering work.</p>
+        <div class="paper-links">
+          <a class="paper" href="https://arxiv.org/abs/2606.30709" target="_blank" rel="noopener noreferrer">
+            <span>Inference method</span>
+            <strong>Hierarchical Global Attention (HGA)</strong>
+            <em>arXiv:2606.30709 · Read the paper ↗</em>
+          </a>
+          <a class="paper" href="https://arxiv.org/abs/2607.15105" target="_blank" rel="noopener noreferrer">
+            <span>Long-context fine-tuning</span>
+            <strong>Long-Context Fine-Tuning with Limited VRAM</strong>
+            <em>arXiv:2607.15105 · Read the paper ↗</em>
+          </a>
+        </div>
+        <details>
+          <summary>Note</summary>
+          <div class="detail-body">
+            <p>Paper 1 describes HGA as a drop-in replacement for dense causal attention in a pretrained transformer, preserving the original attention projection weights and requiring no retraining for the reported inference demonstration. Paper 2 combines HGA with parameter-efficient fine-tuning, segment-wise backpropagation and external K/V storage. Both papers report experimental results on specific models and hardware; broader validation is still required before making universal performance claims.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Research-backed invention · Experimental results are specific to the cited setups
+</footer>
+</body>
+</html>
